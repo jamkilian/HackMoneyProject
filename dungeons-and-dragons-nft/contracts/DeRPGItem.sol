@@ -1,13 +1,13 @@
-DungeonsAndDragonsCharacter.sol// contracts/DungeonsAndDragonsCharacter.sol
+DeRPGItem.sol// contracts/DeRPGItem.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.6;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.6/ChainLinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract DeRPGItem is ERC721, VRFConsumerBase, Ownable {
+    contract DeRPGItem is ERC721, ChainLinkClient, Ownable {
     using SafeMath for uint256;
     using Strings for string;
 
@@ -20,16 +20,10 @@ contract DeRPGItem is ERC721, VRFConsumerBase, Ownable {
     // rinkeby: 0x01BE23585060835E02B77ef475b0Cc51aA1e0709a
 
     struct Item {
-        uint256 strength;
-        uint256 dexterity;
-        uint256 constitution;
-        uint256 intelligence;
-        uint256 wisdom;
-        uint256 charisma;
-        uint256 experience;
         string name;
         string genre;
         string type;
+        string entry;
     }
 
     Character[] public items;
@@ -49,23 +43,24 @@ contract DeRPGItem is ERC721, VRFConsumerBase, Ownable {
     constructor(address _VRFCoordinator, address _LinkToken, bytes32 _keyhash)
         public
         VRFConsumerBase(_VRFCoordinator, _LinkToken)
-        ERC721("DungeonsAndDragonsCharacter", "D&D")
-    {   
+        ERC721("DeRPGItem", "D&D")
+    {
         VRFCoordinator = _VRFCoordinator;
         LinkToken = _LinkToken;
         keyHash = _keyhash;
         fee = 0.1 * 10**18; // 0.1 LINK
     }
 
-    function requestNewRandomCharacter(
+    function requestNewRandomItem(
         string memory name
     ) public returns (bytes32) {
         require(
             LINK.balanceOf(address(this)) >= fee,
             "Not enough LINK - fill contract with faucet"
         );
-        bytes32 requestId = requestRandomness(keyHash, fee);
-        requestToCharacterName[requestId] = name;
+        //Chainlink.Request req = buildChainlinkRequest(specId, callbackAddress, callbackSig);
+        //byte32 requestId = sendChainlinkRequest(req, fee);
+        requestToItemName[requestId] = name;
         requestToSender[requestId] = msg.sender;
         return requestId;
     }
@@ -82,90 +77,37 @@ contract DeRPGItem is ERC721, VRFConsumerBase, Ownable {
         _setTokenURI(tokenId, _tokenURI);
     }
 
-    function fulfillRandomness(bytes32 requestId, uint256 randomNumber)
-        internal
-        override
-    {
-        uint256 newId = characters.length;
-        uint256 strength = (randomNumber % 100);
-        uint256 dexterity = ((randomNumber % 10000) / 100 );
-        uint256 constitution = ((randomNumber % 1000000) / 10000 );
-        uint256 intelligence = ((randomNumber % 100000000) / 1000000 );
-        uint256 wisdom = ((randomNumber % 10000000000) / 100000000 );
-        uint256 charisma = ((randomNumber % 1000000000000) / 10000000000);
-        uint256 experience = 0;
-
-        characters.push(
-            Character(
-                strength,
-                dexterity,
-                constitution,
-                intelligence,
-                wisdom,
-                charisma,
-                experience,
-                requestToCharacterName[requestId]
-            )
-        );
-        _safeMint(requestToSender[requestId], newId);
-    }
-
-    function getLevel(uint256 tokenId) public view returns (uint256) {
-        return sqrt(characters[tokenId].experience);
-    }
-
-    function getNumberOfCharacters() public view returns (uint256) {
+    function getNumberOfItems() public view returns (uint256) {
         return characters.length; 
     }
 
-    function getCharacterOverView(uint256 tokenId)
+    function getItemOverview(uint256 tokenId)
         public
         view
         returns (
             string memory,
-            uint256,
-            uint256,
-            uint256
+            string
         )
     {
         return (
-            characters[tokenId].name,
-            characters[tokenId].strength + characters[tokenId].dexterity + characters[tokenId].constitution + characters[tokenId].intelligence + characters[tokenId].wisdom + characters[tokenId].charisma,
-            getLevel(tokenId),
-            characters[tokenId].experience
+            items[tokenId].name,
+            items[tokenId].entry
         );
     }
 
-    function getCharacterStats(uint256 tokenId)
+    function getItemStats(uint256 tokenId)
         public
         view
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            string,
+            string,
+            string
         )
     {
         return (
-            characters[tokenId].strength,
-            characters[tokenId].dexterity,
-            characters[tokenId].constitution,
-            characters[tokenId].intelligence,
-            characters[tokenId].wisdom,
-            characters[tokenId].charisma,
-            characters[tokenId].experience
+            items[tokenId].name,
+            items[tokenId].genre,
+            items[tokenId].type
         );
-    }
-
-    function sqrt(uint256 x) internal view returns (uint256 y) {
-        uint256 z = (x + 1) / 2;
-        y = x;
-        while (z < y) {
-            y = z;
-            z = (x / z + z) / 2;
-        }
     }
 }
